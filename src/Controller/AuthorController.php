@@ -11,6 +11,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Serializer\SerializerInterface as Serializer;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Doctrine\ORM\EntityManagerInterface as EntityManager;
 
 final class AuthorController extends AbstractController
@@ -19,7 +20,7 @@ final class AuthorController extends AbstractController
     public function getAllAuthors(AuthorRepository $authorRepository, Serializer $serializer): JsonResponse
     {
         $authorlist = $authorRepository->findAll();
-        $jsonAuthorList = $serializer->serialize($authorlist, 'json', ['groups' => ['getBooks']]);
+        $jsonAuthorList = $serializer->serialize($authorlist, 'json', ['groups' => ['getAuthors']]);
         return new JsonResponse($jsonAuthorList, Response::HTTP_OK, [], true);
 
     }
@@ -27,26 +28,44 @@ final class AuthorController extends AbstractController
     #[Route('/api/author/{id}', name: 'app_author_detail', methods: ['GET'])]
     public function getAuthor(Author $author, Serializer $serializer): JsonResponse
     {
-        $author = $serializer->serialize($author, 'json', ['groups' => ['getBooks']]);
+        $author = $serializer->serialize($author, 'json', ['groups' => ['getAuthors']]);
         return new JsonResponse($author, Response::HTTP_OK, [], true);
     }
 
     #[Route('/api/author', name: 'app_author_create', methods: ['POST'])]
-    public function createAuthor(Request $request, EntityManager $em, Serializer $serializer): JsonResponse
+    public function createAuthor(Request $request, EntityManager $em, Serializer $serializer, ValidatorInterface $validator): JsonResponse
     {
         $author = $serializer->deserialize($request->getContent(), Author::class, 'json');
+
+        // On vérifie les erreurs
+        $errors = $validator->validate($author);
+        if ($errors->count() > 0) {
+            return new JsonResponse($serializer->serialize(
+                $errors,
+                'json'
+            ), JsonResponse::HTTP_BAD_REQUEST, [], true);
+        }
 
         $em->persist($author);
         $em->flush();
 
-        $jsonAuthor = $serializer->serialize($author, 'json', ['groups' => ['getBooks']]);
+        $jsonAuthor = $serializer->serialize($author, 'json', ['groups' => ['getAuthors']]);
         return new JsonResponse($jsonAuthor, Response::HTTP_CREATED, [], true);
     }
 
     #[Route('/api/author/{id}', name: 'app_author_update', methods: ['PUT'])]
-    public function updateAuthor(Request $request, Author $author, EntityManager $em, Serializer $serializer): JsonResponse
+    public function updateAuthor(Request $request, Author $author, EntityManager $em, Serializer $serializer, ValidatorInterface $validator): JsonResponse
     {
         $updatedAuthor = $serializer->deserialize($request->getContent(), Author::class, 'json', [AbstractNormalizer::OBJECT_TO_POPULATE => $author]);
+
+        // On vérifie les erreurs
+        $errors = $validator->validate($updatedAuthor);
+        if ($errors->count() > 0) {
+            return new JsonResponse($serializer->serialize(
+                $errors,
+                'json'
+            ), JsonResponse::HTTP_BAD_REQUEST, [], true);
+        }
 
         $em->persist($updatedAuthor);
         $em->flush();

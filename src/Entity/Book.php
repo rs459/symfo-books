@@ -6,6 +6,7 @@ use App\Repository\BookRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: BookRepository::class)]
 class Book
@@ -16,13 +17,21 @@ class Book
     #[Groups(["getBooks"])]
     private ?int $id = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(type: 'string', length: 255)]
     #[Groups(["getBooks"])]
-    private ?string $title = null;
+    #[Assert\NotBlank(message: "Le titre du livre est obligatoire")]
+    #[Assert\Length(min: 1, max: 255, minMessage: "Le titre doit faire
+au moins {{ limit }} caractères", maxMessage: "Le titre ne peut pas
+faire plus de {{ limit }} caractères")]
+    private string $title;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     #[Groups(["getBooks"])]
-    private ?string $coverText = null;
+    #[Assert\NotBlank(message: "Le texte de couverture du livre est obligatoire")]
+    #[Assert\Length(min: 1, max: 5000, minMessage: "Le texte de couverture doit faire
+au moins {{ limit }} caractères", maxMessage: "Le texte de couverture ne peut pas
+faire plus de {{ limit }} caractères")]
+    private string $coverText;
 
     #[ORM\ManyToOne(inversedBy: 'books')]
     #[Groups(["getBooks"])]
